@@ -71,7 +71,7 @@ client.on("interactionCreate", async (interaction) => {
                 ],
             });
 
-            // Enregistre le créateur
+            // Enregistre le créateur dans le groups.json
             groups[channel.id] = {
                 name: groupName,
                 creator: interaction.user.id,
