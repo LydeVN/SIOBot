@@ -1,6 +1,7 @@
 import { Client, GatewayIntentBits, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } from "discord.js";
 import dotenv from "dotenv";
 import fs from "fs";
+import db from "./db.js";
 
 dotenv.config();
 console.log("DISCORD_TOKEN =", process.env.DISCORD_TOKEN ? "OK" : "❌ undefined");
@@ -11,7 +12,7 @@ const client = new Client({
     intents: [GatewayIntentBits.Guilds],
 });
 
-// Chargement des groupes
+// Chargement des groupes depuis le fichier (pour compatibilité, mais à remplacer par la BDD)
 const GROUPS_FILE = "groups.json";
 let groups = {};
 if (fs.existsSync(GROUPS_FILE)) {
@@ -37,8 +38,9 @@ client.on("interactionCreate", async (interaction) => {
             if (user) members.push(user);
         }
 
+        const channelName = `🎪grp-${groupName.toLowerCase()}`;
         const existingChannel = interaction.guild.channels.cache.find(
-            (c) => c.name === "🎪"+`grp-${groupName.toLowerCase()}`
+            (c) => c.name === channelName
         );
         if (existingChannel) {
             return interaction.editReply("❌ Ce groupe existe déjà !");
@@ -46,7 +48,7 @@ client.on("interactionCreate", async (interaction) => {
 
         try {
             const channel = await interaction.guild.channels.create({
-                name: "🎪"+`grp-${groupName.toLowerCase()}`,
+                name: channelName,
                 type: ChannelType.GuildText,
                 permissionOverwrites: [
                     {
@@ -70,12 +72,8 @@ client.on("interactionCreate", async (interaction) => {
                 ],
             });
 
-            // Enregistre le créateur dans le groups.json
-            groups[channel.id] = {
-                name: groupName,
-                creator: interaction.user.id,
-            };
-            fs.writeFileSync(GROUPS_FILE, JSON.stringify(groups, null, 2));
+            // Enregistre le créateur dans la BDD
+            db.addGroup(channel.id, groupName, interaction.user.id);
 
             await interaction.editReply(`✅ Salon créé : ${channel}`);
         } catch (err) {
@@ -137,30 +135,32 @@ client.on("interactionCreate", async (interaction) => {
             );
         }
 
-        const group = groups[channel.id];
-        if (!group) {
-            return interaction.editReply("❌ j'ai essayé aussi, mais enlever quelqu'un qui n'est pas là je ne sais pas encore comment faire.");
-        }
+        // Récupère le groupe depuis la BDD
+        db.getGroup(channel.id, async (err, group) => {
+            if (err || !group) {
+                return interaction.editReply("❌ Impossible de trouver les infos de ce groupe.");
+            }
 
-        // Vérifie si l’utilisateur est bien le créateur
-        if (interaction.user.id !== group.creator) {
-            return interaction.editReply(
-                "❌ Seul le créateur du groupe peut retirer un membre."
-            );
-        }
+            // Vérifie si l’utilisateur est bien le créateur
+            if (interaction.user.id !== group.creator) {
+                return interaction.editReply(
+                    "❌ Seul le créateur du groupe peut retirer un membre."
+                );
+            }
 
-        try {
-            await channel.permissionOverwrites.edit(user.id, {
-                ViewChannel: false,
-                SendMessages: false,
-            });
+            try {
+                await channel.permissionOverwrites.edit(user.id, {
+                    ViewChannel: false,
+                    SendMessages: false,
+                });
 
-            await interaction.editReply(`✅ ${user} a été retiré du groupe.`);
-            await channel.send(`👋 ${user} a été retiré du groupe par le créateur.`);
-        } catch (err) {
-            console.error(err);
-            await interaction.editReply("❌ Erreur lors du retrait du membre.");
-        }
+                await interaction.editReply(`✅ ${user} a été retiré du groupe.`);
+                await channel.send(`👋 ${user} a été retiré du groupe par le créateur.`);
+            } catch (err) {
+                console.error(err);
+                await interaction.editReply("❌ Erreur lors du retrait du membre.");
+            }
+        });
     }
 
     // ======================
@@ -176,79 +176,77 @@ client.on("interactionCreate", async (interaction) => {
             return interaction.editReply("❌ Cette commande doit être utilisée dans un salon de groupe.");
         }
 
-        // Vérifie les infos du groupe
-        const group = groups[channel.id];
-        if (!group) {
-            return interaction.editReply("❌ Impossible de trouver les infos de ce groupe.");
-        }
+        // Récupère le groupe depuis la BDD
+        db.getGroup(channel.id, async (err, group) => {
+            if (err || !group) {
+                return interaction.editReply("❌ Impossible de trouver les infos de ce groupe.");
+            }
 
-        // Vérifie que l’utilisateur est le créateur
-        if (interaction.user.id !== group.creator) {
-            return interaction.editReply(`❌ Seul le créateur du groupe peut supprimer ce salon. <@${group.creator}>`);
-        }
+            // Vérifie que l’utilisateur est le créateur
+            if (interaction.user.id !== group.creator) {
+                return interaction.editReply(`❌ Seul le créateur du groupe peut supprimer ce salon. <@${group.creator}>`);
+            }
 
-        // Ajoute une confirmation avec boutons
-        const row = new ActionRowBuilder().addComponents(
+            // Ajoute une confirmation avec boutons
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('archive_delete')
+                    .setLabel('Archiver')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('cancel_delete')
+                    .setLabel('Annuler')
+                    .setStyle(ButtonStyle.Secondary)
+            );
 
-            new ButtonBuilder()
-                .setCustomId('archive_delete')
-                .setLabel('Archiver')
-                .setStyle(ButtonStyle.Primary),
-            new ButtonBuilder()
-                .setCustomId('cancel_delete')
-                .setLabel('Annuler')
-                .setStyle(ButtonStyle.Secondary)
-        );
+            const confirmMsg = await interaction.editReply({
+                content: "⚠️ Vous êtes sur le point d'archiver ce salon. Pour récupérer un salon archivé, contacte un administrateur. Il sera définitivement supprimé au bout de 30 jours. 😱",
+                components: [row],
+                fetchReply: true,
+            });
 
-        const confirmMsg = await interaction.editReply({
-            content: "⚠️ Vous êtes sur le point d'archiver ce salon. Pour récupérer un salon archivé, contacte un administrateur. Il sera définitivement supprimé au bout de 30 jours. 😱",
-            components: [row],
-            fetchReply: true,
-        });
+            // Collecteur de bouton
+            const filter = (i) => i.user.id === interaction.user.id;
+            const collector = confirmMsg.createMessageComponentCollector({ filter, time: 20000, max: 1 });
 
-        // Collecteur de bouton
-        const filter = (i) => i.user.id === interaction.user.id;
-        const collector = confirmMsg.createMessageComponentCollector({ filter, time: 20000, max: 1 });
-
-        collector.on('collect', async (i) => {
-
+            collector.on('collect', async (i) => {
                 if (i.customId === 'archive_delete') {
-                // Cherche la catégorie Archives
-                const archiveCategory = interaction.guild.channels.cache.find(
-                    (c) => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === "archives"
-                );
-                if (!archiveCategory) {
-                    await i.update({ content: "❌ Catégorie 'Archives' introuvable.", components: [] });
-                    return;
+                    // Cherche la catégorie Archives
+                    const archiveCategory = interaction.guild.channels.cache.find(
+                        (c) => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === "archives"
+                    );
+                    if (!archiveCategory) {
+                        await i.update({ content: "❌ Catégorie 'Archives' introuvable.", components: [] });
+                        return;
+                    }
+                    // Déplace le salon dans la catégorie Archives
+                    await channel.setParent(archiveCategory.id);
+
+                    // Retire l'accès à tous les membres du groupe (sauf everyone)
+                    const overwrites = channel.permissionOverwrites.cache.filter(po =>
+                        po.type === 1 && po.id !== interaction.guild.roles.everyone.id
+                    );
+                    for (const [id] of overwrites) {
+                        await channel.permissionOverwrites.edit(id, {
+                            ViewChannel: false,
+                            SendMessages: false,
+                        });
+                    }
+
+                    await i.update({ content: "✅ Salon archivé dans 'Archives'.", components: [] });
+
+                    // Supprime le groupe de la BDD
+                    db.removeGroup(channel.id);
+                } else {
+                    await i.update({ content: "Suppression annulée.", components: [] });
                 }
-                // Déplace le salon dans la catégorie Archives
-                await channel.setParent(archiveCategory.id);
+            });
 
-                // Retire l'accès à tous les membres du groupe (sauf everyone)
-                const overwrites = channel.permissionOverwrites.cache.filter(po =>
-                    po.type === 1 && po.id !== interaction.guild.roles.everyone.id
-                );
-                for (const [id] of overwrites) {
-                    await channel.permissionOverwrites.edit(id, {
-                        ViewChannel: false,
-                        SendMessages: false,
-                    });
+            collector.on('end', async (collected) => {
+                if (collected.size === 0) {
+                    await interaction.editReply({ content: "⏳ Temps écoulé, suppression annulée.", components: [] });
                 }
-
-                await i.update({ content: "✅ Salon archivé dans 'Archives'.", components: [] });
-
-                // Mets à jour le fichier groups.json
-                delete groups[channel.id];
-                fs.writeFileSync(GROUPS_FILE, JSON.stringify(groups, null, 2));
-            } else {
-                await i.update({ content: "Suppression annulée.", components: [] });
-            }
-        });
-
-        collector.on('end', async (collected) => {
-            if (collected.size === 0) {
-                await interaction.editReply({ content: "⏳ Temps écoulé, suppression annulée.", components: [] });
-            }
+            });
         });
     }
 });
