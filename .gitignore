@@ -1,5 +1,7 @@
 .env
 
+Saves.md
+
 node_modules
 
 !groups.json

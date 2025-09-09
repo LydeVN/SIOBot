@@ -30,7 +30,6 @@ client.on("interactionCreate", async (interaction) => {
     // ======================
     if (interaction.commandName === "create-group") {
         await interaction.deferReply({ ephemeral: true });
-
         const groupName = interaction.options.getString("nom");
         const members = [];
         for (let i = 1; i <= 10; i++) {
@@ -190,10 +189,7 @@ client.on("interactionCreate", async (interaction) => {
 
         // Ajoute une confirmation avec boutons
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('confirm_delete')
-                .setLabel('Confirmer la suppression')
-                .setStyle(ButtonStyle.Danger),
+
             new ButtonBuilder()
                 .setCustomId('archive_delete')
                 .setLabel('Archiver')
@@ -205,7 +201,7 @@ client.on("interactionCreate", async (interaction) => {
         );
 
         const confirmMsg = await interaction.editReply({
-            content: "⚠️ Es-tu sûr de vouloir supprimer ce salon ? Tu peux aussi l’archiver.",
+            content: "⚠️ Vous êtes sur le point d'archiver ce salon. Pour récupérer un salon archivé, contacte un administrateur. Il sera définitivement supprimé au bout de 30 jours. 😱",
             components: [row],
             fetchReply: true,
         });
@@ -215,16 +211,8 @@ client.on("interactionCreate", async (interaction) => {
         const collector = confirmMsg.createMessageComponentCollector({ filter, time: 20000, max: 1 });
 
         collector.on('collect', async (i) => {
-            if (i.customId === 'confirm_delete') {
-                try {
-                    await channel.delete();
-                    delete groups[channel.id];
-                    fs.writeFileSync(GROUPS_FILE, JSON.stringify(groups, null, 2));
-                    console.log(`🗑️ Salon supprimé : ${channel.name}`);
-                } catch (err) {
-                    console.error(err);
-                }
-            } else if (i.customId === 'archive_delete') {
+
+                if (i.customId === 'archive_delete') {
                 // Cherche la catégorie Archives
                 const archiveCategory = interaction.guild.channels.cache.find(
                     (c) => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === "archives"
@@ -266,4 +254,3 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.login(process.env.DISCORD_TOKEN);
-// ...existing code...
