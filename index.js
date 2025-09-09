@@ -94,7 +94,7 @@ client.on("interactionCreate", async (interaction) => {
         const channel = interaction.channel;
 
         // Vérifie si on est bien dans un groupe
-        if (!channel.name.startsWith("grp-")) {
+        if (!channel.name.startsWith("🎪grp-")) {
             return interaction.editReply(
                 "❌ Cette commande doit être utilisée dans un salon de groupe."
             );
@@ -131,7 +131,7 @@ client.on("interactionCreate", async (interaction) => {
         const user = interaction.options.getUser("membre");
         const channel = interaction.channel;
 
-        if (!channel.name.startsWith("grp-")) {
+        if (!channel.name.startsWith("🎪grp-")) {
             return interaction.editReply(
                 "❌ Cette commande doit être utilisée dans un salon de groupe."
             );
@@ -172,7 +172,7 @@ client.on("interactionCreate", async (interaction) => {
         const channel = interaction.channel;
 
         // Vérifie que c’est bien un salon de groupe
-        if (!channel.name.toLowerCase().startsWith("grp-")) {
+        if (!channel.name.toLowerCase().startsWith("🎪grp-")) {
             return interaction.editReply("❌ Cette commande doit être utilisée dans un salon de groupe.");
         }
 
