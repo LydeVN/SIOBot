@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, PermissionsBitField } from "discord.js";
+import { Client, GatewayIntentBits, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } from "discord.js";
 import dotenv from "dotenv";
 import fs from "fs";
 
@@ -48,7 +48,7 @@ client.on("interactionCreate", async (interaction) => {
         try {
             const channel = await interaction.guild.channels.create({
                 name: `grp-${groupName.toLowerCase()}`,
-                type: 0, // 0 = textuel
+                type: ChannelType.GuildText,
                 permissionOverwrites: [
                     {
                         id: interaction.guild.roles.everyone.id,
@@ -164,7 +164,10 @@ client.on("interactionCreate", async (interaction) => {
         }
     }
 
-    if(interaction.commandName === "delete-group") {
+    // ======================
+    // /delete-group
+    // ======================
+    if (interaction.commandName === "delete-group") {
         await interaction.deferReply({ ephemeral: true });
 
         const channel = interaction.channel;
@@ -185,20 +188,82 @@ client.on("interactionCreate", async (interaction) => {
             return interaction.editReply(`❌ Seul le créateur du groupe peut supprimer ce salon. <@${group.creator}>`);
         }
 
-        try {
-            // Supprime le salon
-            await channel.delete();
+        // Ajoute une confirmation avec boutons
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('confirm_delete')
+                .setLabel('Confirmer la suppression')
+                .setStyle(ButtonStyle.Danger),
+            new ButtonBuilder()
+                .setCustomId('archive_delete')
+                .setLabel('Archiver')
+                .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId('cancel_delete')
+                .setLabel('Annuler')
+                .setStyle(ButtonStyle.Secondary)
+        );
 
-            // Nettoie dans groups.json
-            delete groups[channel.id];
-            fs.writeFileSync(GROUPS_FILE, JSON.stringify(groups, null, 2));
+        const confirmMsg = await interaction.editReply({
+            content: "⚠️ Es-tu sûr de vouloir supprimer ce salon ? Tu peux aussi l’archiver.",
+            components: [row],
+            fetchReply: true,
+        });
 
-            console.log(`🗑️ Salon supprimé : ${channel.name}`);
-        } catch (err) {
-            console.error(err);
-            await interaction.editReply("❌ Erreur lors de la suppression du salon.");
-        }
+        // Collecteur de bouton
+        const filter = (i) => i.user.id === interaction.user.id;
+        const collector = confirmMsg.createMessageComponentCollector({ filter, time: 20000, max: 1 });
+
+        collector.on('collect', async (i) => {
+            if (i.customId === 'confirm_delete') {
+                try {
+                    await channel.delete();
+                    delete groups[channel.id];
+                    fs.writeFileSync(GROUPS_FILE, JSON.stringify(groups, null, 2));
+                    console.log(`🗑️ Salon supprimé : ${channel.name}`);
+                } catch (err) {
+                    console.error(err);
+                }
+            } else if (i.customId === 'archive_delete') {
+                // Cherche la catégorie Archives
+                const archiveCategory = interaction.guild.channels.cache.find(
+                    (c) => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === "archives"
+                );
+                if (!archiveCategory) {
+                    await i.update({ content: "❌ Catégorie 'Archives' introuvable.", components: [] });
+                    return;
+                }
+                // Déplace le salon dans la catégorie Archives
+                await channel.setParent(archiveCategory.id);
+
+                // Retire l'accès à tous les membres du groupe (sauf everyone)
+                const overwrites = channel.permissionOverwrites.cache.filter(po =>
+                    po.type === 1 && po.id !== interaction.guild.roles.everyone.id
+                );
+                for (const [id] of overwrites) {
+                    await channel.permissionOverwrites.edit(id, {
+                        ViewChannel: false,
+                        SendMessages: false,
+                    });
+                }
+
+                await i.update({ content: "✅ Salon archivé dans 'Archives'.", components: [] });
+
+                // Mets à jour le fichier groups.json
+                delete groups[channel.id];
+                fs.writeFileSync(GROUPS_FILE, JSON.stringify(groups, null, 2));
+            } else {
+                await i.update({ content: "Suppression annulée.", components: [] });
+            }
+        });
+
+        collector.on('end', async (collected) => {
+            if (collected.size === 0) {
+                await interaction.editReply({ content: "⏳ Temps écoulé, suppression annulée.", components: [] });
+            }
+        });
     }
 });
 
 client.login(process.env.DISCORD_TOKEN);
+// ...existing code...
