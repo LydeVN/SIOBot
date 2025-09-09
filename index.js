@@ -46,7 +46,7 @@ client.on("interactionCreate", async (interaction) => {
 
         try {
             const channel = await interaction.guild.channels.create({
-                name: `grp-${groupName.toLowerCase()}`,
+                name: "🎪"+`grp-${groupName.toLowerCase()}`,
                 type: ChannelType.GuildText,
                 permissionOverwrites: [
                     {
