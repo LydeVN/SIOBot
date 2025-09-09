@@ -38,7 +38,7 @@ client.on("interactionCreate", async (interaction) => {
         }
 
         const existingChannel = interaction.guild.channels.cache.find(
-            (c) => c.name === `grp-${groupName.toLowerCase()}`
+            (c) => c.name === `🎪grp-${groupName.toLowerCase()}`
         );
         if (existingChannel) {
             return interaction.editReply("❌ Ce groupe existe déjà !");
