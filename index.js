@@ -139,7 +139,7 @@ client.on("interactionCreate", async (interaction) => {
 
         const group = groups[channel.id];
         if (!group) {
-            return interaction.editReply("❌ Impossible de trouver les infos de ce groupe.");
+            return interaction.editReply("❌ j'ai essayé aussi, mais enlever quelqu'un qui n'est pas là je ne sais pas encore comment faire.");
         }
 
         // Vérifie si l’utilisateur est bien le créateur
