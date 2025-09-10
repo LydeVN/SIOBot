@@ -35,6 +35,15 @@ client.on("messageCreate", async (message) => {
     }
 });
 
+client.on("messageCreate", async (message) => {
+    if (message.author.bot) return;
+    if (message.content === "!rgpd") {
+        await message.reply(
+            {content: "Les principes du RGPD :", files: ["./img/RGPD.png"]}
+        );
+    }
+});
+
 client.on("interactionCreate", async (interaction) => {
 
     if (!interaction.isChatInputCommand()) return;
