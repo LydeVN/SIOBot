@@ -9,7 +9,10 @@ console.log("CLIENT_ID =", process.env.CLIENT_ID);
 console.log("GUILD_ID =", process.env.GUILD_ID);
 
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds],
+    intents: [GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ],
 });
 
 // Chargement des groupes depuis le fichier (pour compatibilité, mais à remplacer par la BDD)
@@ -23,7 +26,17 @@ client.once("ready", () => {
     console.log(`✅ Connecté en tant que ${client.user.tag}`);
 });
 
+client.on("messageCreate", async (message) => {
+    if (message.author.bot) return;
+    if (message.content === "!osi") {
+        await message.reply(
+            {content: "Voici le modèle OSI :", files: ["./img/OSI_Model.svg.png"]}
+        );
+    }
+});
+
 client.on("interactionCreate", async (interaction) => {
+
     if (!interaction.isChatInputCommand()) return;
 
     // ======================
