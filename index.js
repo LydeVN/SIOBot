@@ -28,7 +28,7 @@ client.once("ready", () => {
 
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
-    if (message.content === "!osi") {
+    if (message.content === "!osi" || message.content === "!OSI") {
         await message.reply(
             {content: "Voici le modèle OSI :", files: ["./img/OSI_Model.svg.png"]}
         );
@@ -37,7 +37,7 @@ client.on("messageCreate", async (message) => {
 
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
-    if (message.content === "!rgpd") {
+    if (message.content === "!rgpd" || message.content === "!RGPD") {
         await message.reply(
             {content: "Les principes du RGPD :", files: ["./img/RGPD.png"]}
         );
