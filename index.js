@@ -28,7 +28,7 @@ client.once("ready", () => {
 
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
-    if (message.content === "!osi" || message.content === "!OSI") {
+    if (message.content.toLowerCase() === "!osi") {
         await message.reply(
             {content: "Voici le modèle OSI :", files: ["./img/OSI_Model.svg.png"]}
         );
