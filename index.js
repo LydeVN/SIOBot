@@ -3,7 +3,6 @@ import path from "path";
 import { Client, Collection, GatewayIntentBits } from "discord.js";
 import dotenv from "dotenv";
 import sqlite3 from "sqlite3";
-import { open } from "sqlite";
 
 dotenv.config();
 
@@ -21,22 +20,24 @@ for (const file of commandFiles) {
   client.commands.set(command.data.name, command);
 }
 
-// Connexion SQLite
-let db;
-async function connectDB() {
-  db = await open({
-    filename: "./database.db", // ton fichier .db
-    driver: sqlite3.Database,
-  });
-  console.log("✅ Connecté à la base SQLite");
-}
+// Connexion à SQLite
+const db = new sqlite3.Database("./database.db", (err) => {
+  if (err) {
+    console.error("❌ Erreur de connexion à SQLite :", err.message);
+  } else {
+    console.log("✅ Connecté à la base SQLite");
+  }
+});
 
-client.once("ready", async () => {
+client.once("ready", () => {
   console.log(`✅ Connecté en tant que ${client.user.tag}`);
 
-  // Afficher les groupes enregistrés
-  try {
-    const rows = await db.all("SELECT channelId, name, creator FROM groups");
+  // Lire les groupes depuis la base
+  db.all("SELECT channelId, name, creator FROM groups", async (err, rows) => {
+    if (err) {
+      console.error("❌ Erreur lors de la récupération des groupes :", err.message);
+      return;
+    }
 
     if (rows.length === 0) {
       console.log("📂 Aucun groupe enregistré en base.");
@@ -59,28 +60,32 @@ client.once("ready", async () => {
         }
       }
     }
-  } catch (err) {
-    console.error("❌ Erreur lors de la récupération des groupes :", err);
-  }
+  });
 });
 
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   const command = client.commands.get(interaction.commandName);
-
   if (!command) return;
 
   try {
-    await command.execute(interaction, db); // 👈 passe la DB aux commandes
+    // Passe la DB à la commande si elle en a besoin
+    await command.execute(interaction, db);
   } catch (err) {
     console.error(err);
-    await interaction.reply({
-      content: "❌ Une erreur est survenue lors de l’exécution de cette commande.",
-      ephemeral: true,
-    });
+    if (interaction.deferred || interaction.replied) {
+      await interaction.followUp({
+        content: "❌ Une erreur est survenue lors de l’exécution de cette commande.",
+        ephemeral: true,
+      });
+    } else {
+      await interaction.reply({
+        content: "❌ Une erreur est survenue lors de l’exécution de cette commande.",
+        ephemeral: true,
+      });
+    }
   }
 });
 
-await connectDB();
 client.login(process.env.DISCORD_TOKEN);
