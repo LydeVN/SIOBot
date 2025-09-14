@@ -2,15 +2,6 @@ import { SlashCommandBuilder, PermissionsBitField } from "discord.js";
 import fs from "fs";
 
 const GROUPS_FILE = "groups.json";
-let groups = {};
-if (fs.existsSync(GROUPS_FILE)) {
-  try {
-    groups = JSON.parse(fs.readFileSync(GROUPS_FILE, "utf8"));
-  } catch {
-    groups = {};
-    fs.writeFileSync(GROUPS_FILE, "{}");
-  }
-}
 
 export const data = new SlashCommandBuilder()
   .setName("create-group")
@@ -19,7 +10,7 @@ export const data = new SlashCommandBuilder()
     option.setName("nom").setDescription("Nom du projet").setRequired(true)
   )
   .addUserOption((option) =>
-    option.setName("membre1").setDescription("Membre 1").setRequired(true)
+    option.setName("membre1").setDescription("Membre 1").setRequired(false)
   )
   .addUserOption((option) =>
     option.setName("membre2").setDescription("Membre 2").setRequired(false)
@@ -71,7 +62,13 @@ export async function execute(interaction) {
       ],
     });
 
-    // Enregistre le créateur
+    // Charger l’existant
+    let groups = {};
+    if (fs.existsSync(GROUPS_FILE)) {
+      groups = JSON.parse(fs.readFileSync(GROUPS_FILE, "utf8"));
+    }
+
+    // Enregistrer ce groupe
     groups[channel.id] = {
       name: groupName,
       creator: interaction.user.id,
