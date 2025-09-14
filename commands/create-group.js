@@ -30,7 +30,7 @@ export async function execute(interaction) {
   }
 
   const existingChannel = interaction.guild.channels.cache.find(
-    (c) => c.name === `grp-${groupName.toLowerCase()}`
+    (c) => c.name === `🎪grp-${groupName.toLowerCase()}`
   );
   if (existingChannel) {
     return interaction.editReply("❌ Ce groupe existe déjà !");
@@ -38,7 +38,7 @@ export async function execute(interaction) {
 
   try {
     const channel = await interaction.guild.channels.create({
-      name: `grp-${groupName.toLowerCase()}`,
+      name: `🎪grp-${groupName.toLowerCase()}`,
       type: 0, // textuel
       permissionOverwrites: [
         {
