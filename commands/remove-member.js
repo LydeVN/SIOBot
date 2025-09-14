@@ -29,7 +29,7 @@ export async function execute(interaction) {
   const channel = interaction.channel;
 
   // Vérifie si c'est bien un groupe
-  if (!channel.name.toLowerCase().startsWith("grp-")) {
+  if (!channel.name.toLowerCase().startsWith("🎪grp-")) {
     return interaction.editReply("❌ Cette commande doit être utilisée dans un salon de groupe.");
   }
 
