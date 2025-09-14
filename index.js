@@ -10,8 +10,8 @@ console.log("GUILD_ID =", process.env.GUILD_ID);
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
     ],
 });
 
@@ -30,7 +30,7 @@ client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
     if (message.content.toLowerCase() === "!osi") {
         await message.reply(
-            {content: "Voici le modèle OSI :", files: ["./img/OSI_Model.svg.png"]}
+            { content: "Voici le modèle OSI :", files: ["./img/OSI_Model.svg.png"] }
         );
     }
 });
@@ -39,7 +39,7 @@ client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
     if (message.content === "!rgpd" || message.content === "!RGPD") {
         await message.reply(
-            {content: "Les principes du RGPD :", files: ["./img/RGPD.png"]}
+            { content: "Les principes du RGPD :", files: ["./img/RGPD.png"] }
         );
     }
 });
@@ -270,6 +270,20 @@ client.on("interactionCreate", async (interaction) => {
                 }
             });
         });
+    }
+    if (interaction.commandName === "announce") {
+        const message = interaction.options.getString("message");
+
+        try {
+            // Réponse éphémère à l’auteur pour confirmer
+            await interaction.reply({ content: "✅ Message envoyé publiquement !", ephemeral: true });
+
+            // Envoi public dans le salon
+            await interaction.channel.send(message);
+        } catch (err) {
+            console.error(err);
+            await interaction.reply({ content: "❌ Impossible d’envoyer le message.", ephemeral: true });
+        }
     }
 });
 

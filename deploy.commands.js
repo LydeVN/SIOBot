@@ -59,8 +59,18 @@ const commands = [
         ),
 
     new SlashCommandBuilder()
-  .setName("delete-group")
-  .setDescription("Supprimer ce groupe (créateur uniquement)"),
+        .setName("delete-group")
+        .setDescription("Supprimer ce groupe (créateur uniquement)"),
+
+    new SlashCommandBuilder()
+        .setName("announce")
+        .setDescription("Envoyer un message public via le bot")
+        .addStringOption((option) =>
+            option
+                .setName("message")
+                .setDescription("Le message à annoncer publiquement")
+                .setRequired(true)
+        ),
 
 
 
