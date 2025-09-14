@@ -26,6 +26,15 @@ const db = new sqlite3.Database("./database.db", (err) => {
     console.error("❌ Erreur de connexion à SQLite :", err.message);
   } else {
     console.log("✅ Connecté à la base SQLite");
+
+     db.all("SELECT name FROM sqlite_master WHERE type='table'", (err, rows) => {
+      if (err) {
+        console.error("❌ Erreur lors de la récupération des tables :", err.message);
+      } else {
+        console.log("📂 Tables dans la base SQLite :");
+        rows.forEach((row) => console.log(`- ${row.name}`));
+      }
+    });
   }
 });
 
